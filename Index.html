@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Uma Jornada de el Mariachi</title>
+    <style>
+        :root {
+            --bg-sky: #87CEEB;
+            --ground: #8B4513;
+            --ui-bg: rgba(255, 255, 255, 0.95);
+        }
+        
+        * { box-sizing: border-box; user-select: none; }
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-sky);
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh;
+        }
+
+        #game-container {
+            width: 100vw; height: 100vh; max-width: 900px;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 60%);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
+        }
+
+        .pixel-art { image-rendering: pixelated; }
+
+        /* Telas */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            align-items: center; text-align: center; z-index: 10;
+        }
+        .active { display: flex; }
+
+        #menu-screen {
+            background: rgba(0, 0, 0, 0.85); color: white; overflow-y: auto; padding: 20px 0; justify-content: flex-start;
+        }
+        
+        h1 { font-size: 28px; margin-bottom: 10px; text-shadow: 2px 2px 0 #ff9800; }
+        h2 { font-size: 16px; margin-bottom: 20px; color: #ffcc00; }
+
+        .btn {
+            background: #ff9800; border: 4px solid #fff; color: white;
+            padding: 12px 20px; margin: 8px; font-size: 16px; font-family: inherit;
+            font-weight: bold; cursor: pointer; text-transform: uppercase;
+            box-shadow: 4px 4px 0 #000; transition: transform 0.1s;
+        }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+
+        .level-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;
+            width: 90%; max-width: 600px;
+        }
+        
+        .level-btn {
+            position: relative; width: 100%; height: 60px;
+            background: #4caf50; border: 4px solid #fff; color: white;
+            font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer;
+        }
+        .level-btn.locked { background: #555; border-color: #888; }
+        .level-btn .check { position: absolute; top: -10px; right: -10px; background: white; border-radius: 50%; font-size: 20px; display: none; border: 2px solid black;}
+        .level-btn.perfect .check { display: block; }
+
+        /* Jogo UI */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; min-height: 120px;
+            z-index: 20; background: var(--ui-bg); border-bottom: 4px solid #000;
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+            padding: 10px 10px 20px 10px;
+        }
+        
+        #top-controls {
+            width: 100%; display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;
+        }
+
+        .small-btn {
+            padding: 8px 12px; font-size: 12px; font-weight: bold; background: #e91e63;
+            border: 2px solid #000; color: white; cursor: pointer; text-transform: uppercase;
+        }
+
+        #question-area {
+            width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px;
+        }
+
+        #question-text {
+            font-size: 18px; font-weight: bold; color: #000; text-align: center;
+            padding: 0 10px; width: 100%; max-width: 700px;
+        }
+        
+        #options-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+        
+        .opt-btn {
+            background: #2196F3; border: 3px solid #000; color: white;
+            padding: 10px 15px; font-family: inherit; font-size: 16px; font-weight: bold; cursor: pointer;
+            box-shadow: 2px 2px 0 #000;
+        }
+        .opt-btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+        
+        /* Botões de Coluna (Correspondência) */
+        .col-pt { background: #9c27b0; width: 150px; }
+        .col-es { background: #ff9800; width: 150px; }
+
+        /* Cena do Jogo (Gráficos) */
+        #scene { position: absolute; bottom: 40%; left: 0; width: 100%; height: 64px; z-index: 5; }
+        
+        #mariachi {
+            position: absolute; bottom: 0; left: 20px;
+            width: 64px; height: 64px;
+        }
+        
+        .obstacle { position: absolute; bottom: 0; }
+        #bridge { right: 0; height: 20px; background: #795548; transition: transform 0.5s, opacity 0.5s; border: 2px solid #3e2723; }
+        #gate { right: 10%; width: 40px; height: 120px; background: #607d8b; border: 2px solid #263238; transition: transform 0.5s; }
+        
+        .block-part { height: 20px; background: #795548; border: 1px solid #000; float: left; opacity: 0; transition: opacity 0.3s; }
+        .fence { width: 10px; height: 40px; background: #ffcc00; border: 2px solid #d84315; transition: opacity 0.3s; }
+        .stone { height: 15px; background: #9e9e9e; border: 2px solid #424242; border-radius: 5px; opacity: 0.3; transition: opacity 0.3s; }
+        
+        @keyframes drop-fail { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(100px); opacity: 0; } }
+        .fail-anim { animation: drop-fail 1s forwards; }
+
+        #confirm-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 100; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-box { background: white; padding: 20px; border: 4px solid black; text-align: center; }
+        
+        @media (max-width: 600px) {
+            .level-grid { grid-template-columns: repeat(2, 1fr); }
+            #question-text { font-size: 16px; }
+            .opt-btn { font-size: 14px; padding: 8px; }
+            .col-pt, .col-es { width: 130px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="menu-screen" class="screen active">
+        <h1>Uma Jornada de<br>el Mariachi</h1>
+        <h2>Selecione sua Jornada</h2>
+        <div class="level-grid" id="level-grid"></div>
+        <button class="btn" onclick="resetProgress()" style="margin-top: 20px; background: #d32f2f;">Zerar Progresso</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="ui-layer">
+            <div id="top-controls">
+                <button class="small-btn" onclick="showConfirm('Deseja pular esta fase?', skipStage)">Pular Fase</button>
+                <button class="small-btn" onclick="showConfirm('Deseja voltar ao Menu?', returnToMenu)">Menu</button>
+            </div>
+            <div id="question-area">
+                <div id="question-text">Carregando...</div>
+                <div id="options-container"></div>
+            </div>
+        </div>
+
+        <div id="scene">
+            <div id="obstacle-container"></div>
+            <svg id="mariachi" class="pixel-art" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="28" height="3" fill="#ffb300" stroke="#000" stroke-width="1"/>
+                <rect x="10" y="0" width="12" height="5" fill="#ffb300" stroke="#000" stroke-width="1"/>
+                <rect x="12" y="5" width="8" height="6" fill="#ffccbc"/>
+                <rect x="10" y="8" width="12" height="2" fill="#000"/>
+                <rect x="10" y="11" width="12" height="13" fill="#212121" stroke="#000" stroke-width="1"/>
+                <rect x="15" y="11" width="2" height="13" fill="#fff"/>
+                <rect x="10" y="21" width="12" height="3" fill="#c62828"/>
+                <rect x="6" y="14" width="14" height="6" fill="#795548" rx="2"/>
+                <circle cx="16" cy="17" r="2" fill="#3e2723"/>
+                <rect id="leg1" x="12" y="24" width="3" height="8" fill="#000"/>
+                <rect id="leg2" x="17" y="24" width="3" height="8" fill="#000"/>
+            </svg>
+        </div>
+    </div>
+
+    <div id="confirm-modal">
+        <div class="modal-box">
+            <p id="confirm-text" style="font-weight: bold; font-size: 18px;"></p>
+            <button class="btn" id="btn-yes">Sim</button>
+            <button class="btn" style="background:#555;" onclick="closeConfirm()">Não</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= BANCO DE DADOS (AGORA COM FRASES EM ALGUMAS PALAVRAS) ================= */
+    const rawWords = [
+        ["Começar", "comenzar / empezar", "Tenemos que ___ la clase ahora."], 
+        ["Bonito", "guapo / hermoso", "El paisaje es muy ___."], 
+        ["Casa", "casa", "Mi ___ es grande y azul."], 
+        ["GuardaChuva", "paraguas", "Lleva el ___ porque va a llover."], 
+        ["Ciumento", "celoso / celosa", "Él es muy ___ con su novia."], 
+        ["Tudo Bem?", "qué tal / que tal", "Hola amigo, ¿___?"], 
+        ["Quebrado", "roto", "El vaso de vidrio está ___."], 
+        ["Janeiro", "enero", "El primer mes del año es ___."], 
+        ["Vermelho", "rojo", "La manzana es de color ___."], 
+        ["Aniversário", "cumpleaños / cumple años", "Hoy es mi ___ y habrá fiesta."], 
+        ["Distraída", "despistada", "Ella olvidó las llaves, es muy ___."], 
+        ["Cartão", "tarjeta", "Voy a pagar con ___ de crédito."], 
+        ["Dinheiro", "billete / plata / dinero", "No tengo ___ en la cartera."], 
+        ["Sobrancelha", "ceja", "Ella levantó una ___ con duda."], 
+        ["Segunda Feira", "lunes", "El ___ empieza la semana laboral."], 
+        ["Longe", "lejos", "La escuela está muy ___ de mi casa."], 
+        ["Perto", "cerca", "El supermercado está ___ de aquí."], 
+        ["Aproximando", "cercando"], ["Pipas", "cometas"], ["Binóculo", "prismático"], 
+        ["Fevereiro", "febrero", "El carnaval suele ser en ___."], 
+        ["Óculos", "gafas", "Necesito mis ___ para leer."], 
+        ["Devagar", "despacio", "Por favor, hable más ___."], 
+        ["Bum bum", "trasero / pompas / culata"], 
+        ["Dançar", "bailar", "Me encanta ___ salsa en las fiestas."], 
+        ["Data", "fecha", "¿Cuál es la ___ de hoy?"], 
+        ["Terça Feira", "martes"], ["Lembre se", "recuerda"], 
+        ["Criança", "niño / criatura / chico / guri", "El ___ está jugando en el parque."], 
+        ["Brinquedo", "juguete", "Mi ___ favorito es un coche."], 
+        ["Acreditar", "creer / confiar"], ["Esquecer", "olvidar"], ["Ficar", "quedarse / permanecer"], 
+        ["Garfo", "tenedor", "Necesito un ___ para comer la ensalada."], 
+        ["Cadeira", "silla / asiento", "Siéntate en esta ___."], 
+        // A partir daqui, as palavras seguem normais (o sistema vai mesclar automático as que têm e não têm frases)
+        ["Vassoura", "escoba"], ["Escritório", "oficina / despacho"], ["Fuja", "huye / escapa"], ["Ouvir", "oír / escuchar"], ["Bochechas", "mejillas / cachetes"], ["Março", "marzo"], ["Maio", "mayo"], ["Junho", "junio"], 
+        ["Cheio", "lleno"], ["Peitos", "pechos / senos"], ["Joelhos", "rodillas / rojillas"], ["Julho", "julio"], ["Agosto", "agosto"], ["Escada", "escalera"], 
+        ["Vazio", "vacío"], ["Mas", "pero / sino"], ["Então", "entonces / luego"], ["Avô", "abuelo / abuelos"], ["Avó", "abuela / abuelas"], ["Quinta feira", "jueves"], 
+        ["Sexta feira", "viernes"], ["Não acha?", "¿no crees? / ¿no te parece?"], ["Quarto", "cuarto / habitación / dormitorio"], ["Cômodo", "cómodo"], 
+        ["Galhos", "ramas"], ["Derrotado", "derrotado / vencido"], ["Cansado", "cansado / agotado"], ["Pedras", "piedras / rocas"], ["Boné", "gorra / gorro"], 
+        ["Treme", "tiembla / tiemble"], ["Tirar", "quitar / sacar"], ["Enquanto", "mientras"], ["Entre", "entre / mientras"], ["Fome", "hambre"], ["Sede", "sed"], 
+        ["Dor", "dolor"], ["Alegria", "alegría"], ["Medo", "miedo / temor"], ["Saudade", "extrañar / echar de menos / añoranza"], ["Angústia", "angustia"], 
+        ["Pêssego", "durazno / melocotón"], ["Mexerica", "mandarina"], ["Uva", "uva"], ["Melancia", "sandía"], ["Abacaxi", "piña / ananá"], ["Abacate", "aguacate / palta"], 
+        ["Casal", "pareja"], ["Rua", "calle"], ["Batata", "papa / papá"], ["Caneta", "bolígrafo / pluma / lapicero"], ["Estragado", "estropeado / podrido / arruinado"], 
+        ["Chave de fenda", "destornillador"], ["Consertando", "arreglando / reparando"], ["Tem", "tiene"], ["Faz", "hace"], ["Fazer", "hacer"], ["Vitrine", "muestrario / escaparate"], 
+        ["Balcão", "mostrador"], ["Povoado", "pueblo / poblado"], ["Amarelo", "amarillo"], ["Hambúrguer", "hamburguesa"], ["Um momento", "un rato"], 
+        ["Levar", "llevar / marcador"], ["Chateado", "enojado / molesto / aburrido"], ["Carregam", "cargan / llevan"], ["Ficam-se", "quedan / estar / quedarse"], 
+        ["Chato", "aburrido / pesado"], ["Usar", "usar / utilizar / llevar"], ["Zangado", "enfadado / rabioso"], ["Demorar", "tardar / demorar"], ["Preciso", "necesito"], 
+        ["Certo", "cierto / correcto / verdad"], ["Pegar", "tomar / agarrar / recoger"], ["Lá", "allá / allí"], ["Levando", "llevando"], ["Adiante", "adelante"], 
+        ["Frequentemente", "a menudo / frecuentemente"], ["Preguiçoso", "perezoso / flojo"], ["Treino", "entrenamiento / práctica / entreno"], 
+        ["No entanto", "sin embargo / no obstante"], ["Eu gosto", "mi mola / me gusta"], ["Então", "entonces / así que"], ["Praça", "plaza"], 
+        ["Espantado", "asombrado / espantado"], ["Esqueci", "olvidé / se me olvidó"], ["Jantar", "cenar"], ["Almoço", "almuerzo / comida"], ["Café da manhã", "desayuno"], 
+        ["Acordar", "despertar / despertarse"], ["Fechado", "cerrado"], ["On line", "en línea / conectado"], ["Pescoço", "cuello"], ["Eu olhei", "miré / he mirado"], 
+        ["Demais", "demasiado"], ["Em excesso", "demasiado / excesivamente"], ["Isso mesmo", "así es / exactamente"], ["Que faço", "que hago / qué hago"], 
+        ["Me contou", "me contó / me dijo / me ha contado"], ["Inveja", "envidia"], ["Concordou", "estuvo de acuerdo / accedió"], ["Conseguir", "lograr / conseguir"], 
+        ["Não conseguiu", "no pudo / no lo logró"], ["Nele", "en él"], ["Neste", "en este"], ["Claro", "claro / por supuesto"], ["Embora", "aunque"], ["Legal", "chévere / guay / bacán"], 
+        ["Feito", "hecho"], ["Pintado", "pintado / mosqueado"], ["Manchado", "manchado / mosqueado"], ["Fedor", "hedor / peste"], ["Mau hálito", "mal aliento"], 
+        ["Mau cheiro", "mal olor"], ["Cheiro bom", "buen olor / aroma"], ["Fragrância", "fragancia"], ["Barulho", "ruido"], ["Vontade", "ganas / voluntad"], 
+        ["Desejo", "deseo"], ["Magro", "flaco / delgado"], ["Gordo", "gordo"], ["Belo corpo", "buen cuerpo / cuerpazo"], ["Pronto", "listo / preparado"], 
+        ["Feijão", "frijoles / porotos / alubias / frijol"], ["Esperto", "listo / espabilado"], ["Biscoitos", "galletas"], ["Desenhar", "dibujar"], ["Sorveteria", "heladería"], 
+        ["Lanchonete", "cafetería / snack-bar"], ["Dor de cabeça", "dolor de cabeza / jaqueca"], ["Remédio", "remedio / medicamento"], ["Gripe", "gripe / resfriado"], 
+        ["Febre", "fiebre"], ["Enjoado", "mareado / con náuseas"], ["Falamos", "hablamos"], ["Melhorar", "mejorar / recuperarse"], ["Ferida", "herida / lesión"], 
+        ["Farmácia", "farmacia / botica"], ["Tudo bem!", "vale"], ["Adesivos", "calcomanías"], ["Tornou", "hizo"], ["Ovo", "huevo"], ["Molho", "salsa"], 
+        ["Verduras", "verduras"], ["Sinto muito", "lo siento"], ["Passagem", "pasaje / boleto / billete"], ["Cartão de embarque", "tarjeta de embarque"], 
+        ["Portão de embarque", "puerta de embarque"], ["Voo", "vuelo"], ["Bagagem de mão", "equipaje de mano"], ["Despachar mala", "facturar equipaje"], 
+        ["Passaporte", "pasaporte"], ["Alfândega", "aduana"], ["Comissário de bordo", "auxiliar de vuelo / azafata"], ["Decolagem", "despegue"], ["Pouso", "aterrizaje"], 
+        ["Assento", "asiento / plaza"], ["Rodoviária", "terminal de autobuses"], ["Ônibus", "autobús / camión / guagua"], ["Plataforma", "andén / plataforma"], 
+        ["Motorista", "conductor / chofer"], ["Endereço", "dirección / señas"], ["Chave", "llave"], ["Andar", "piso / planta"], ["Elevador", "ascensor / elevador"], 
+        ["Virar", "girar / doblar"], ["Seguir reto", "seguir recto / seguir derecho"], ["Nota fiscal", "factura"], ["Pipoca", "palomitas / pochoclo / cabritas"], 
+        ["Trabalho", "trabajo / laburo"], ["Camiseta", "camiseta / remera / polera"], ["Amigo", "amigo / che / boludo"], ["Morango", "fresa / frutilla"], 
+        ["Chinelos", "chanclas / ojotas"], ["Jaqueta", "chaqueta / camper"], ["Milho", "maíz / choclo"], ["muito bom", "muy bueno"], ["os preços", "los precios"], 
+        ["Filme", "película"], ["de carro", "en coche"], ["Eu sei", "yo sé"], ["Preciso", "necessito"], ["Ruim", "mala / malo"], ["4", "cuatro / cuarto"], 
+        ["Viajar", "viajar"], ["Trabalho", "trabajo / para el trabajo"], ["Ontem", "ayer"], ["Hoje", "hoy"], ["Amanhã", "mañana"], ["Agora", "ahora"], 
+        ["Frango", "pollo"], ["Bife de boi", "filete de res"], ["Porco", "cerdo"], ["Dirige", "maneja"], ["Idoso", "mayores / viejo / anciano"], 
+        ["Aposentado", "jubilado"], ["Desempregado", "desempleados / desempleado"], ["Vocês", "ustedes"], ["Primavera", "primavera"], ["Verão", "verano"], 
+        ["Outono", "otoño"], ["Inverno", "invierno"], ["Casaco", "abrigo"], ["Colher", "cuchara"], ["Faca", "cuchillo"], ["Palitos Japoneses", "palillos / palillo"], 
+        ["Tigela", "tazón"], ["Prato", "plato / platos"], ["Caneca", "taza / tazas"], ["Garrafa", "botella / botellas"], ["Batatas Fritas", "patatas fritas / papas fritas"], 
+        ["Fritar", "freír"], ["Guardanapo", "servilleta"], ["Moro", "vivo"], ["Saída", "salida"], ["Sairemos", "iremos"], ["Saio", "salgo"], ["Cachecol", "bufanda"], 
+        ["Roxo", "morado"], ["Atraso", "retraso"], ["volta", "vuelve / vuelver"], ["Passaro", "pajaro"], ["Cinza", "gris"], ["Zombando", "burlaba / reír"], 
+        ["Chefe", "jefe"], ["Vergonha", "verguenza"]
+    ];
+
+    const wordDatabase = rawWords.map(w => ({ pt: w[0], es: w[1], phrase: w[2] || null }));
+    const WORDS_PER_STAGE = 10;
+    const TOTAL_STAGES = Math.ceil(wordDatabase.length / WORDS_PER_STAGE);
+
+    /* ================= ESTADO DO JOGO ================= */
+    let gameState = { unlocked: 1, perfectStages: {} };
+    let currentStage = 1;
+    let currentStageData = {};
+    let questionsPool = [];
+    let currentQuestionIndex = 0;
+    let obstaclesCleared = 0;
+    let perfectRun = true;
+    let walkInterval;
+    let stageTimeout; 
+    let selectedPT = null;
+    let expectedES = null;
+
+    /* ================= INICIALIZAÇÃO ================= */
+    window.onload = () => { loadData(); renderMenu(); };
+
+    function loadData() {
+        const saved = localStorage.getItem('mariachi_save_v3');
+        if (saved) gameState = JSON.parse(saved);
+    }
+    function saveData() { localStorage.setItem('mariachi_save_v3', JSON.stringify(gameState)); }
+
+    function resetProgress() {
+        if(confirm("Tem certeza que deseja apagar todo o progresso?")) {
+            localStorage.removeItem('mariachi_save_v3');
+            gameState = { unlocked: 1, perfectStages: {} };
+            renderMenu();
+        }
+    }
+
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    function returnToMenu() {
+        closeConfirm();
+        stopWalk();
+        clearTimeout(stageTimeout);
+        switchScreen('menu-screen');
+        renderMenu();
+    }
+
+    function renderMenu() {
+        const grid = document.getElementById('level-grid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= TOTAL_STAGES; i++) {
+            let btn = document.createElement('button');
+            btn.className = `level-btn ${i > gameState.unlocked ? 'locked' : ''} ${gameState.perfectStages[i] ? 'perfect' : ''}`;
+            btn.innerHTML = `Fase ${i} <span class="check">✅</span>`;
+            if (i <= gameState.unlocked) btn.onclick = () => startStage(i);
+            grid.appendChild(btn);
+        }
+    }
+
+    function showConfirm(text, action) {
+        document.getElementById('confirm-text').innerText = text;
+        document.getElementById('confirm-modal').style.display = 'flex';
+        document.getElementById('btn-yes').onclick = () => { closeConfirm(); action(); };
+    }
+    function closeConfirm() { document.getElementById('confirm-modal').style.display = 'none'; }
+
+    function skipStage() { perfectRun = false; finishStage(true); }
+
+    /* ================= LÓGICA DE FASE ================= */
+    function startStage(stageId) {
+        currentStage = stageId;
+        perfectRun = true;
+        currentQuestionIndex = 0;
+        obstaclesCleared = 0;
+        selectedPT = null; expectedES = null;
+        
+        // Ciclo dinâmico de mecânicas (Agora com 6 opções, incluindo as Colunas)
+        const mechanics = ['bridge', 'blocks', 'fences', 'stones', 'magic', 'columns'];
+        const mechType = mechanics[(stageId - 1) % mechanics.length];
+        currentStageData = { type: mechType, total: WORDS_PER_STAGE };
+        
+        const startIndex = (stageId - 1) * WORDS_PER_STAGE;
+        questionsPool = wordDatabase.slice(startIndex, startIndex + WORDS_PER_STAGE);
+
+        setupScene();
+        switchScreen('game-screen');
+        
+        // CORREÇÃO CRÍTICA DO BUG AQUI: Sempre zera o conteúdo antes de carregar a pergunta
+        document.getElementById('question-text').innerHTML = '';
+        document.getElementById('options-container').innerHTML = '';
+        
+        loadQuestion();
+    }
+
+    function setupScene() {
+        const obsContainer = document.getElementById('obstacle-container');
+        const mariachi = document.getElementById('mariachi');
+        obsContainer.innerHTML = '';
+        
+        mariachi.style.transition = 'left 0.5s linear, bottom 0.1s linear';
+        mariachi.style.left = '20px';
+        stopWalk();
+
+        const screenWidth = window.innerWidth || 800;
+
+        if (currentStageData.type === 'bridge') {
+            obsContainer.innerHTML = `<div id="bridge" class="obstacle" style="transform: translateY(-200px); width: 120px;"></div>`;
+        } else if (currentStageData.type === 'columns') {
+            // Nova Mecânica: O Portão que vai abaixando
+            obsContainer.innerHTML = `<div id="gate" class="obstacle" style="transform: translateY(0px);"></div>`;
+        } else if (currentStageData.type === 'blocks' || currentStageData.type === 'magic') {
+            const blockWidth = Math.min((screenWidth - 150) / 10, 40);
+            let html = `<div id="bridge" class="obstacle" style="background: transparent; border: none; width: ${10 * blockWidth}px; right: 50px;">`;
+            for(let i=0; i<10; i++) {
+                html += `<div class="block-part" id="block-${i}" style="width:${blockWidth}px; background: ${currentStageData.type==='magic'?'#ffeb3b':'#795548'}; box-shadow: ${currentStageData.type==='magic'?'0 0 10px #ffeb3b':'none'}"></div>`;
+            }
+            html += `</div>`;
+            obsContainer.innerHTML = html;
+        } else if (currentStageData.type === 'fences' || currentStageData.type === 'stones') {
+            let html = '';
+            const spacing = (screenWidth - 100) / 10;
+            for(let i=0; i<10; i++) {
+                let left = 80 + (i * spacing);
+                let h = currentStageData.type === 'fences' ? 40 : 15;
+                let cls = currentStageData.type === 'fences' ? 'fence' : 'stone obstacle';
+                let extraStyle = currentStageData.type === 'stones' ? `width: ${spacing*0.6}px; opacity: 1; bottom: 0;` : '';
+                html += `<div class="obstacle ${cls}" id="obs-${i}" style="left: ${left}px; height: ${h}px; ${extraStyle}"></div>`;
+            }
+            obsContainer.innerHTML = html;
+        }
+    }
+
+    function loadQuestion() {
+        if (currentQuestionIndex >= currentStageData.total || currentQuestionIndex >= questionsPool.length) {
+            finishStage(); return;
+        }
+
+        const uiOptions = document.getElementById('options-container');
+        const uiText = document.getElementById('question-text');
+
+        // ==== NOVA MECÂNICA: COLUNAS ====
+        if (currentStageData.type === 'columns') {
+            // Renderiza 5 pares por vez
+            if (currentQuestionIndex % 5 === 0) {
+                let roundWords = questionsPool.slice(currentQuestionIndex, currentQuestionIndex + 5);
+                let ptList = [...roundWords].sort(()=>Math.random()-0.5);
+                let esList = [...roundWords].sort(()=>Math.random()-0.5);
+
+                uiText.innerHTML = "Associe as palavras: Clique no Português e depois no Espanhol.";
+                let html = `<div style="display:flex; gap:10px; width:100%; justify-content:center; flex-wrap: wrap;">`;
+                
+                // Coluna PT
+                html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+                ptList.forEach((w, idx) => {
+                    // Substituimos espaços e barras por _ para o ID não quebrar
+                    let safeID = "pt-" + idx;
+                    html += `<button class="opt-btn col-pt" id="${safeID}" onclick="selectPT('${safeID}', '${w.es}')">${w.pt}</button>`;
+                });
+                html += `</div>`;
+
+                // Coluna ES
+                html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+                esList.forEach((w, idx) => {
+                    let safeID = "es-" + idx;
+                    html += `<button class="opt-btn col-es" id="${safeID}" onclick="selectES('${safeID}', '${w.es}')">${w.es}</button>`;
+                });
+                html += `</div></div>`;
+
+                uiOptions.innerHTML = html;
+            }
+            return; // Espera a interação do usuário nas colunas
+        }
+
+        // ==== MECÂNICAS NORMAIS ====
+        const q = questionsPool[currentQuestionIndex];
+        
+        // Mesclando Frases e Traduções diretas
+        if (q.phrase) {
+            uiText.innerHTML = `Complete a frase:<br><b>"${q.phrase}"</b><br><small>(Dica: Significa "${q.pt}")</small>`;
+        } else {
+            uiText.innerHTML = `Traduza: "${q.pt}"`;
+        }
+
+        let options = [q.es];
+        while(options.length < 3) {
+            let randWord = wordDatabase[Math.floor(Math.random() * wordDatabase.length)].es;
+            if(!options.includes(randWord)) options.push(randWord);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        uiOptions.innerHTML = '';
+        options.forEach(opt => {
+            let btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => handleAnswer(opt, q.es);
+            uiOptions.appendChild(btn);
+        });
+    }
+
+    // ==== LÓGICA DE CLIQUE DAS COLUNAS ====
+    window.selectPT = function(btnId, esCorrect) {
+        document.querySelectorAll('.col-pt').forEach(b => b.style.borderColor = '#000');
+        document.getElementById(btnId).style.borderColor = '#ffeb3b';
+        selectedPT = btnId;
+        expectedES = esCorrect;
+    }
+
+    window.selectES = function(btnId, esText) {
+        if (!selectedPT) return; // Precisa selecionar o português primeiro
+        
+        if (esText === expectedES) {
+            // Acertou
+            document.getElementById(selectedPT).style.visibility = 'hidden';
+            document.getElementById(btnId).style.visibility = 'hidden';
+            selectedPT = null; expectedES = null;
+            handleAnswer(true, true); // Força um acerto na função principal
+        } else {
+            // Errou
+            handleAnswer(false, true); 
+            document.querySelectorAll('.col-pt').forEach(b => b.style.borderColor = '#000');
+            selectedPT = null; expectedES = null;
+        }
+    }
+
+    function handleAnswer(selected, correct) {
+        let isSuccess = (selected === correct) || (selected === true); // Para suportar as colunas
+
+        if (isSuccess) {
+            obstaclesCleared++;
+            updateObstacleAnimation(true);
+            
+            if(currentStageData.type === 'fences' || currentStageData.type === 'stones') {
+                const screenWidth = window.innerWidth || 800;
+                const spacing = (screenWidth - 100) / 10;
+                moveMariachi(80 + ((currentQuestionIndex) * spacing)); 
+            } else if (currentStageData.type === 'columns') {
+                // Mariachi dá um passo pra frente a cada acerto
+                const screenWidth = window.innerWidth || 800;
+                const step = (screenWidth - 200) / 10;
+                moveMariachi(20 + ((obstaclesCleared) * step)); 
+            }
+            
+            currentQuestionIndex++;
+
+            if (currentStageData.type === 'columns') {
+                if (currentQuestionIndex % 5 === 0) setTimeout(loadQuestion, 400); // Chama o próximo grupo de 5
+            } else {
+                setTimeout(loadQuestion, 300);
+            }
+
+        } else {
+            perfectRun = false;
+            updateObstacleAnimation(false);
+            document.body.style.backgroundColor = "#ffcccc";
+            setTimeout(() => { document.body.style.backgroundColor = ""; }, 200);
+        }
+    }
+
+    function updateObstacleAnimation(isCorrect) {
+        if (currentStageData.type === 'bridge') {
+            if(isCorrect) {
+                let drop = -200 + ( (200 / 10) * obstaclesCleared );
+                document.getElementById('bridge').style.transform = `translateY(${drop > 0 ? 0 : drop}px)`;
+            }
+        } else if (currentStageData.type === 'columns') {
+            if(isCorrect) {
+                // O portão afunda
+                let drop = (120 / 10) * obstaclesCleared;
+                document.getElementById('gate').style.transform = `translateY(${drop}px)`;
+            }
+        }
+        else if (currentStageData.type === 'blocks' || currentStageData.type === 'magic') {
+            if(isCorrect) {
+                document.getElementById(`block-${obstaclesCleared-1}`).style.opacity = 1;
+            } else {
+                let fake = document.createElement('div');
+                fake.className = 'block-part fail-anim';
+                fake.style.position = 'absolute';
+                fake.style.left = (obstaclesCleared * 30) + 'px';
+                document.getElementById('bridge').appendChild(fake);
+                setTimeout(() => fake.remove(), 1000);
+            }
+        }
+        else if (currentStageData.type === 'fences') {
+            if(isCorrect) {
+                let obs = document.getElementById(`obs-${obstaclesCleared-1}`);
+                if(obs) obs.style.opacity = '0.2'; 
+            }
+        }
+        else if (currentStageData.type === 'stones') {
+            if(isCorrect) {
+                let obs = document.getElementById(`obs-${obstaclesCleared-1}`);
+                if(obs) obs.style.backgroundColor = '#4caf50'; 
+            }
+        }
+    }
+
+    function finishStage(skipped = false) {
+        document.getElementById('question-text').innerHTML = skipped ? 'Fase Pulada!' : 'Jornada Concluída!';
+        
+        // CORREÇÃO DO BUG: Ao invés de apagar tudo com innerHTML quebrando a tag, nós limpamos apenas o CONTEÚDO da div
+        document.getElementById('options-container').innerHTML = ''; 
+        
+        if (!skipped && perfectRun) gameState.perfectStages[currentStage] = true;
+        if (currentStage >= gameState.unlocked && currentStage < TOTAL_STAGES) gameState.unlocked = currentStage + 1;
+        saveData();
+
+        const mariachi = document.getElementById('mariachi');
+        mariachi.style.transition = 'left 4s linear'; 
+        moveMariachi(window.innerWidth + 100, 4000);
+        
+        stageTimeout = setTimeout(() => { returnToMenu(); }, 4200);
+    }
+
+    /* ================= ANIMAÇÕES MARIACHI ================= */
+    function moveMariachi(targetX, customDuration = 500) {
+        const mariachi = document.getElementById('mariachi');
+        mariachi.style.left = targetX + 'px';
+        
+        let bounce = false;
+        clearInterval(walkInterval);
+        walkInterval = setInterval(() => {
+            bounce = !bounce;
+            mariachi.style.bottom = bounce ? '4px' : '0px';
+            document.getElementById('leg1').style.opacity = bounce ? '1' : '0';
+            document.getElementById('leg2').style.opacity = bounce ? '0' : '1';
+        }, 150);
+
+        setTimeout(() => stopWalk(), customDuration);
+    }
+
+    function stopWalk() {
+        clearInterval(walkInterval);
+        const mariachi = document.getElementById('mariachi');
+        if(mariachi) {
+            mariachi.style.bottom = '0px';
+            document.getElementById('leg1').style.opacity = '1';
+            document.getElementById('leg2').style.opacity = '1';
+        }
+    }
+</script>
+</body>
+</html>
