@@ -13,20 +13,21 @@
         
         * { box-sizing: border-box; user-select: none; }
         
-        body {
+        html, body {
             margin: 0; padding: 0;
+            width: 100%; height: 100%;
             background-color: var(--bg-sky);
             font-family: 'Courier New', Courier, monospace;
             overflow: hidden;
             display: flex; justify-content: center; align-items: center;
-            height: 100vh;
         }
 
         #game-container {
-            width: 100vw; height: 100vh; max-width: 900px;
+            width: 100%; height: 100%; max-width: 900px;
             position: relative;
             background: linear-gradient(to bottom, #87CEEB 60%, #8B4513 60%);
             box-shadow: 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
+            display: flex; flex-direction: column;
         }
 
         .pixel-art { image-rendering: pixelated; }
@@ -39,74 +40,80 @@
         }
         .active { display: flex; }
 
+        /* Ajustes Especiais no Menu para telas de WebViewer/Celular */
         #menu-screen {
-            background: rgba(0, 0, 0, 0.85); color: white; overflow-y: auto; padding: 20px 0; justify-content: flex-start;
+            background: rgba(0, 0, 0, 0.85); color: white;
+            padding: 15px 10px; justify-content: space-between;
         }
         
-        h1 { font-size: 28px; margin-bottom: 10px; text-shadow: 2px 2px 0 #ff9800; }
-        h2 { font-size: 16px; margin-bottom: 20px; color: #ffcc00; }
+        #menu-header { flex-shrink: 0; }
+        
+        h1 { font-size: 24px; margin: 5px 0; text-shadow: 2px 2px 0 #ff9800; }
+        h2 { font-size: 15px; margin: 5px 0 15px 0; color: #ffcc00; }
 
         .btn {
             background: #ff9800; border: 4px solid #fff; color: white;
-            padding: 12px 20px; margin: 8px; font-size: 16px; font-family: inherit;
+            padding: 10px 16px; margin: 5px; font-size: 14px; font-family: inherit;
             font-weight: bold; cursor: pointer; text-transform: uppercase;
-            box-shadow: 4px 4px 0 #000; transition: transform 0.1s;
+            box-shadow: 3px 3px 0 #000; transition: transform 0.1s; flex-shrink: 0;
         }
-        .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
 
+        /* Área de fases com rolagem interna caso não caiba tudo */
         .level-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;
-            width: 90%; max-width: 600px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            width: 100%; max-width: 600px; padding: 10px;
+            overflow-y: auto; flex-grow: 1; max-height: 65vh;
         }
         
         .level-btn {
-            position: relative; width: 100%; height: 60px;
-            background: #4caf50; border: 4px solid #fff; color: white;
-            font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer;
+            position: relative; width: 100%; height: 55px;
+            background: #4caf50; border: 3px solid #fff; color: white;
+            font-family: inherit; font-size: 13px; font-weight: bold; cursor: pointer;
         }
         .level-btn.locked { background: #555; border-color: #888; }
-        .level-btn .check { position: absolute; top: -10px; right: -10px; background: white; border-radius: 50%; font-size: 20px; display: none; border: 2px solid black;}
+        .level-btn .check { position: absolute; top: -8px; right: -8px; background: white; border-radius: 50%; font-size: 16px; display: none; border: 2px solid black;}
         .level-btn.perfect .check { display: block; }
 
         /* Jogo UI */
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; min-height: 120px;
+            position: absolute; top: 0; left: 0; width: 100%; min-height: 110px;
             z-index: 20; background: var(--ui-bg); border-bottom: 4px solid #000;
             display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
-            padding: 10px 10px 20px 10px;
+            padding: 8px 10px 15px 10px;
         }
         
         #top-controls {
-            width: 100%; display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;
+            width: 100%; display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px;
         }
 
         .small-btn {
-            padding: 8px 12px; font-size: 12px; font-weight: bold; background: #e91e63;
+            padding: 6px 10px; font-size: 11px; font-weight: bold; background: #e91e63;
             border: 2px solid #000; color: white; cursor: pointer; text-transform: uppercase;
         }
 
         #question-area {
-            width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px;
+            width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;
         }
 
         #question-text {
-            font-size: 18px; font-weight: bold; color: #000; text-align: center;
-            padding: 0 10px; width: 100%; max-width: 700px;
+            font-size: 16px; font-weight: bold; color: #000; text-align: center;
+            padding: 0 5px; width: 100%; max-width: 700px;
         }
         
-        #options-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+        #options-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; }
         
         .opt-btn {
             background: #2196F3; border: 3px solid #000; color: white;
-            padding: 10px 15px; font-family: inherit; font-size: 16px; font-weight: bold; cursor: pointer;
+            padding: 8px 12px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer;
             box-shadow: 2px 2px 0 #000;
         }
         .opt-btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
         
-        .col-pt { background: #9c27b0; width: 150px; }
-        .col-es { background: #ff9800; width: 150px; }
+        .col-pt { background: #9c27b0; width: 130px; }
+        .col-es { background: #ff9800; width: 130px; }
 
-        /* Cena do Jogo */
+        /* Cena do Jogo - ALINHAMENTO CORRIGIDO AQUI (bottom: 40%) */
         #scene { position: absolute; bottom: 40%; left: 0; width: 100%; height: 64px; z-index: 5; }
         
         #mariachi {
@@ -134,9 +141,9 @@
         
         @media (max-width: 600px) {
             .level-grid { grid-template-columns: repeat(2, 1fr); }
-            #question-text { font-size: 16px; }
-            .opt-btn { font-size: 14px; padding: 8px; }
-            .col-pt, .col-es { width: 130px; }
+            #question-text { font-size: 15px; }
+            .opt-btn { font-size: 13px; padding: 8px; }
+            .col-pt, .col-es { width: 110px; font-size: 12px; }
         }
     </style>
 </head>
@@ -144,10 +151,12 @@
 
 <div id="game-container">
     <div id="menu-screen" class="screen active">
-        <h1>Uma Jornada de<br>el Mariachi</h1>
-        <h2>Selecione sua Jornada</h2>
+        <div id="menu-header">
+            <h1>Uma Jornada de<br>el Mariachi</h1>
+            <h2>Selecione sua Jornada</h2>
+        </div>
         <div class="level-grid" id="level-grid"></div>
-        <button class="btn" onclick="resetProgress()" style="margin-top: 20px; background: #d32f2f;">Zerar Progresso</button>
+        <button class="btn" onclick="resetProgress()" style="background: #d32f2f;">Zerar Progresso</button>
     </div>
 
     <div id="game-screen" class="screen">
@@ -182,7 +191,7 @@
 
     <div id="confirm-modal">
         <div class="modal-box">
-            <p id="confirm-text" style="font-weight: bold; font-size: 18px;"></p>
+            <p id="confirm-text" style="font-weight: bold; font-size: 16px;"></p>
             <button class="btn" id="btn-yes">Sim</button>
             <button class="btn" style="background:#555;" onclick="closeConfirm()">Não</button>
         </div>
@@ -190,7 +199,7 @@
 </div>
 
 <script>
-    /* ================= SINTETIZADOR DE ÁUDIO NATIVO (WEB AUDIO API) ================= */
+    /* ================= SINTETIZADOR DE ÁUDIO NATIVO ================= */
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
 
@@ -199,7 +208,6 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    // Efeito: Passo do Mariachi
     function playStepSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
@@ -215,15 +223,14 @@
         osc.stop(audioCtx.currentTime + 0.08);
     }
 
-    // Efeito: Acerto de Palavra
     function playCorrectSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
-        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.16); // G5
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.16);
         gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
         osc.connect(gain);
@@ -232,7 +239,6 @@
         osc.stop(audioCtx.currentTime + 0.3);
     }
 
-    // Efeito: Erro
     function playWrongSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
@@ -248,7 +254,6 @@
         osc.stop(audioCtx.currentTime + 0.3);
     }
 
-    // Efeito: Construção / Peça Aparecendo
     function playBuildSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
@@ -264,10 +269,9 @@
         osc.stop(audioCtx.currentTime + 0.06);
     }
 
-    // Efeito: Vitória da Fase
     function playVictorySound() {
         initAudio();
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // Acorde C Maior
+        const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, index) => {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -683,7 +687,7 @@
             mariachi.style.bottom = bounce ? '4px' : '0px';
             document.getElementById('leg1').style.opacity = bounce ? '1' : '0';
             document.getElementById('leg2').style.opacity = bounce ? '0' : '1';
-            playStepSound(); // Efeito sonoro do passo a cada movimento das pernas
+            playStepSound();
         }, 150);
 
         setTimeout(() => stopWalk(), customDuration);
